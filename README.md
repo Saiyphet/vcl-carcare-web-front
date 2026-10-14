@@ -11,16 +11,31 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-The API must run on `http://localhost:4000`. With `VITE_API_URL` empty, the dev server proxies `/api` and `/uploads` to it (`vite.config.js`), so phones on the same Wi-Fi work too.
+## API
+
+Production API (Render + Supabase): `https://vcl-carcare-api.onrender.com`
+
+- Health check: `https://vcl-carcare-api.onrender.com/health`
+- App requests go to `/api/v1` on that origin. Do **not** put `/health` in `VITE_API_URL`.
+
+For a local NestJS API, leave `VITE_API_URL` empty so the Vite server proxies `/api` and `/uploads` to `http://localhost:4000` (`vite.config.js`). That also works on phones on the same Wi-Fi.
 
 ## Environment
 
 | Variable | Value |
 |---|---|
-| `VITE_API_URL` | Empty for local dev. On Vercel: the public HTTPS URL of the API, e.g. `https://api.example.com` |
+| `VITE_API_URL` | Empty for a local API. Cloud / Vercel: `https://vcl-carcare-api.onrender.com` |
 
-The API must also list the web app's domain in its `CORS_ORIGINS`.
+The API must also list the web app's domain in its `CORS_ORIGINS` (localhost + the Vercel URL).
 
 ## Deploy (Vercel)
 
-`vercel.json` sets the build (`npm run build` → `dist`) and the single-page-app fallback. Set `VITE_API_URL` in the Vercel project settings before deploying.
+`vercel.json` sets the build (`npm run build` → `dist`) and the single-page-app fallback.
+
+In the Vercel project:
+
+1. Settings → Environment Variables
+2. Add `VITE_API_URL` = `https://vcl-carcare-api.onrender.com` (Production, Preview, Development)
+3. Redeploy so the build picks up the variable
+
+On Render, add the Vercel domain (and `http://localhost:5173`) to `CORS_ORIGINS`.

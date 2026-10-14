@@ -3,9 +3,15 @@
  * Based on examples/nextjs/lib/api.ts (vcl-carcare-api on the Desktop). Endpoints that copy
  * leaves out were added to match docs/openapi.json and the running API.
  *
- * .env:  VITE_API_URL=http://localhost:4000
+ * .env:  VITE_API_URL=https://vcl-carcare-api.onrender.com
+ * Leave empty in local .env to proxy through Vite → http://localhost:4000.
  */
-export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+function apiOrigin(raw?: string) {
+  const value = (raw ?? '').trim().replace(/\/+$/, '');
+  if (!value) return '';
+  return value.replace(/\/health$/i, '');
+}
+export const API_URL = apiOrigin(import.meta.env.VITE_API_URL);
 const BASE = `${API_URL}/api/v1`;
 
 // ───────── Types (match the API) ─────────
