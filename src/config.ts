@@ -4,4 +4,5 @@ export const SHOP = {
   phoneRaw: '02099885527',
   facebook: 'TOUMTAM VANNASAK',
   slogan: 'ດູແລລົດທ່ານ ເໝືອນລົດເຮົາເອງ',
+  qr: '/qr-pay.png',
 };

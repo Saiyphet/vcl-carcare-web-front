@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore';
 import type { PaymentInput, PaymentMethod } from '../lib/api';
 import { cls, money, toAmount } from '../utils/format';
 import { Icon, type IconName } from './Icon';
+import { PayQr } from './PayQr';
 
 export type PayLine = { key: string; name: string; price: number; qty?: number; unitPrice?: number; unit?: string | null; product?: boolean };
 
@@ -114,6 +115,7 @@ export function PaymentSheet({
           </>
         ) : (
           <>
+            {(method === 'QR' || method === 'TRANSFER') && <PayQr />}
             <label className="card-label" htmlFor="pay-ref">ເລກອ້າງອີງ (refNo)</label>
             <label className="field">
               <input id="pay-ref" value={refNo} onChange={(event) => setRefNo(event.target.value)} placeholder="ເລກອ້າງອີງການໂອນ / QR" />

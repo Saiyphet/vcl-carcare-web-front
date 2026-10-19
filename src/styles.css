@@ -773,6 +773,18 @@ select:focus-visible {
 .dash { border: 0; border-top: 1px dashed #ccc; margin: 10px 0; }
 .paper .line { font-size: 14px; }
 .paper .big { font-size: 18px; font-weight: 800; }
+.pay-qr { text-align: center; padding: 8px 0 4px; }
+.pay-qr img {
+  display: block;
+  width: min(100%, 220px);
+  margin: 0 auto 6px;
+  background: white;
+  border-radius: 8px;
+}
+.pay-qr b { display: block; font-size: 14px; font-weight: 800; }
+.pay-qr small { display: block; color: var(--muted); font-weight: 700; }
+.paper .pay-qr small { color: #555; }
+.paper.w58 .pay-qr img { width: 42mm; }
 
 @media (min-width: 1024px) {
   body {
@@ -1388,6 +1400,9 @@ select:focus-visible {
   .app-head { display: none !important; }
   .paper.w58 { width: 58mm; padding: 0; }
   .paper.w80 { width: 80mm; padding: 0; }
+  .pay-qr img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .paper.w58 .pay-qr img { width: 38mm; }
+  .paper.w80 .pay-qr img { width: 46mm; }
   .sheet-back { position: static; background: none; display: block; }
   .sheet { width: 100%; max-height: none; padding: 0; }
   .sheet-head { display: none; }

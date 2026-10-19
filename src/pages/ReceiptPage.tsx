@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
+import { PayQr } from '../components/PayQr';
 import { Empty, PageHeader, Skeleton } from '../components/ui';
 import { SHOP } from '../config';
 import { useApi } from '../hooks/useStore';
@@ -73,6 +74,8 @@ export function ReceiptPage() {
             {bill.method === 'CASH' && bill.received != null && <div className="line"><span>ຮັບເງິນ</span><b>{money(bill.received)}</b></div>}
             {bill.method === 'CASH' && bill.change != null && <div className="line"><span>ເງິນທອນ</span><b>{money(bill.change)}</b></div>}
             {bill.refNo && <div className="line"><span>ເລກອ້າງອີງ</span><b>{bill.refNo}</b></div>}
+            <hr className="dash" />
+            <PayQr />
             <hr className="dash" />
             <p className="center">{SHOP.slogan}</p>
             <p className="center">ຂອບໃຈທີ່ໃຊ້ບໍລິການ</p>
