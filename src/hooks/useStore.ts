@@ -1,13 +1,14 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { errorMessage, getBase, getSelectedBranchId, getSession, getToast, getVersion, report, subscribe } from '../api';
-import { ApiError } from '../lib/api';
+import { ApiError, isAdmin, isSuperAdmin } from '../lib/api';
 
 export function useStore() {
   const base = useSyncExternalStore(subscribe, getBase, getBase);
   const session = useSyncExternalStore(subscribe, getSession, getSession);
   const branchId = useSyncExternalStore(subscribe, getSelectedBranchId, getSelectedBranchId);
-  const admin = session?.role === 'admin';
-  return { base, session, branchId, admin };
+  const admin = isAdmin(session);
+  const superAdmin = isSuperAdmin(session);
+  return { base, session, branchId, admin, superAdmin };
 }
 
 export function useToast() {

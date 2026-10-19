@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
-import { AdminRoute } from './components/RoleGate';
+import { AdminRoute, SuperAdminRoute } from './components/RoleGate';
 import { Frame } from './components/Shell';
 import { useStore } from './hooks/useStore';
 import { AppointmentsPage } from './pages/AppointmentsPage';
@@ -60,12 +60,14 @@ export function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route element={<AdminRoute />}>
               <Route path="/reports/monthly" element={<ReportsPage />} />
-              <Route path="/reports/branches" element={<BranchReportPage />} />
               <Route path="/staff" element={<StaffPage />} />
               <Route path="/admin/payroll" element={<PayrollPage />} />
               <Route path="/admin/users" element={<UsersPage />} />
-              <Route path="/admin/branches" element={<BranchesPage />} />
               <Route path="/admin/services" element={<ServicesPage />} />
+            </Route>
+            <Route element={<SuperAdminRoute />}>
+              <Route path="/reports/branches" element={<BranchReportPage />} />
+              <Route path="/admin/branches" element={<BranchesPage />} />
             </Route>
             <Route path="/intake" element={<Navigate to="/receive" replace />} />
             <Route path="/queue" element={<Navigate to="/unpaid" replace />} />

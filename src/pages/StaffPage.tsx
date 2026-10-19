@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { branchParam } from '../api';
 import { Avatar, Empty, Kip, PageHeader, Skeleton } from '../components/ui';
 import { useApi, useStore } from '../hooks/useStore';
-import { api } from '../lib/api';
+import { api, ROLE_LABEL } from '../lib/api';
 import { money, monthStart, shopDate } from '../utils/format';
 
 export function StaffPage() {
@@ -38,7 +38,7 @@ export function StaffPage() {
             <Avatar name={member.name} size={46} />
             <div>
               <b>{member.name}</b>
-              <small>{member.position || (member.role === 'ADMIN' ? 'ເຈົ້າຂອງຮ້ານ' : 'ພະນັກງານ')}{member.branch ? ` · ${member.branch.code}` : ''}</small>
+              <small>{member.position || ROLE_LABEL[member.role]}{member.branch ? ` · ${member.branch.code}` : ''}</small>
               <small>{member.cars} ຄັນ · {member.items} ລາຍການ · ຍອດ {money(member.sales)}</small>
             </div>
             <div className="person-meta">

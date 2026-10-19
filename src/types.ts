@@ -1,6 +1,5 @@
-export type { JobStatus, PaymentMethod, ProductCategory, VehicleSize } from './lib/api';
-
-export type Role = 'admin' | 'user';
+export type { JobStatus, PaymentMethod, ProductCategory, Role, VehicleSize } from './lib/api';
+import type { Role } from './lib/api';
 
 export type Session = {
   userId: string;

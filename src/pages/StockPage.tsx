@@ -221,7 +221,17 @@ function Movements({ item, onClose }: { item: Product; onClose: () => void }) {
 }
 
 function BranchPrices({ item, onClose }: { item: Product; onClose: () => void }) {
-  const { base } = useStore();
+  const { base, session, superAdmin } = useStore();
+  const own = session?.branchId
+    ? base.branches.filter((branch) => branch.id === session.branchId)
+    : [];
+  const branches = superAdmin
+    ? base.branches
+    : own.length
+      ? own
+      : session?.branchId
+        ? [{ id: session.branchId, code: session.branchCode ?? '', name: session.branchName ?? '', address: null, phone: null, active: true }]
+        : [];
   const detail = useApi(() => api.products.get(item.id), [item.id]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState('');
@@ -251,7 +261,7 @@ function BranchPrices({ item, onClose }: { item: Product; onClose: () => void })
     <Sheet title="ລາຄາສະເພາະສາຂາ" onClose={onClose}>
       <p className="muted">{item.name} · ລາຄາປົກກະຕິ {money(item.price)} ກີບ</p>
       {detail.loading && !detail.data && <Skeleton />}
-      {base.branches.map((branch) => {
+      {branches.map((branch) => {
         const value = current(branch.id);
         return (
           <div key={branch.id} className="branch-price">
@@ -271,13 +281,13 @@ function BranchPrices({ item, onClose }: { item: Product; onClose: () => void })
 }
 
 export function StockPage() {
-  const { admin, branchId, base } = useStore();
+  const { admin, superAdmin, branchId, base } = useStore();
   const [tab, setTab] = useState<ProductCategory>('CHEMICAL');
   const [form, setForm] = useState<{ item: Product | null } | null>(null);
   const [stock, setStock] = useState<{ item: Product; mode: 'IN' | 'ADJUST' } | null>(null);
   const [moves, setMoves] = useState<Product | null>(null);
   const [prices, setPrices] = useState<Product | null>(null);
-  const allBranches = admin && !branchId;
+  const allBranches = superAdmin && !branchId;
   const blocked = needsBranch();
   const { data, loading } = useApi(
     () => api.products.list({ branchId: branchParam(), category: tab, limit: 100 }).then((result) => result.data),
@@ -295,7 +305,7 @@ export function StockPage() {
         <button type="button" className={cls(tab === 'CHEMICAL' && 'on')} onClick={() => setTab('CHEMICAL')}>ນ້ຳຢາ</button>
         <button type="button" className={cls(tab === 'EQUIPMENT' && 'on')} onClick={() => setTab('EQUIPMENT')}>ອຸປະກອນ</button>
       </div>
-      <RoleGate>
+      <RoleGate owner>
         <div className="stat-grid">
           <article className="stat"><span>ລາຍການ</span><b>{items.length}</b></article>
           <article className="stat"><span>ມູນຄ່າສະຕັອກ (ຕົ້ນທຶນ)</span><b>{money(value)} ກີບ</b></article>
@@ -313,7 +323,7 @@ export function StockPage() {
                 ເຫຼືອ {item.qty} {item.unit}{item.isLow ? ' · ໃກ້ໝົດ' : ''}
                 {item.sellable ? ` · ຂາຍ ${money(item.effectivePrice)}` : ''}
               </small>
-              {admin && item.cost != null && (
+              {superAdmin && item.cost != null && (
                 <small>ຕົ້ນທຶນ {money(item.cost)} · ມູນຄ່າ {money(item.qty * item.cost)}{item.sellable ? ` · ກຳໄລ ${money(item.effectivePrice - item.cost)}` : ''}</small>
               )}
               {item.barcode && <small>ບາໂຄດ {item.barcode}</small>}
@@ -328,7 +338,7 @@ export function StockPage() {
                 <button type="button" className="mini" disabled={blocked} onClick={() => setStock({ item, mode: 'IN' })}>+ ຮັບເຂົ້າ</button>
                 {admin && <button type="button" className="mini" disabled={blocked} onClick={() => setStock({ item, mode: 'ADJUST' })}>ປັບຍອດ</button>}
                 <button type="button" className="mini" onClick={() => setMoves(item)}>ປະຫວັດ</button>
-                {admin && <button type="button" className="mini" onClick={() => setForm({ item })}>ແກ້ໄຂ</button>}
+                {superAdmin && <button type="button" className="mini" onClick={() => setForm({ item })}>ແກ້ໄຂ</button>}
                 {admin && item.sellable && <button type="button" className="mini" onClick={() => setPrices(item)}>ລາຄາສາຂາ</button>}
               </div>
             </div>
@@ -337,12 +347,12 @@ export function StockPage() {
         ))}
       </div>
       {blocked && <p className="footnote">ກະລຸນາເລືອກສາຂາ ເພື່ອຮັບເຂົ້າ ຫຼື ປັບຍອດ</p>}
-      <RoleGate>
+      <RoleGate owner>
         <div className="pad">
           <button type="button" className="btn ghost wide" onClick={() => setForm({ item: null })}>+ ເພີ່ມສິນຄ້າ</button>
         </div>
       </RoleGate>
-      {form && <ProductForm item={form.item} category={tab} onClose={() => setForm(null)} />}
+      {form && superAdmin && <ProductForm item={form.item} category={tab} onClose={() => setForm(null)} />}
       {stock && <StockDialog item={stock.item} mode={stock.mode} onClose={() => setStock(null)} />}
       {moves && <Movements item={moves} onClose={() => setMoves(null)} />}
       {prices && <BranchPrices item={prices} onClose={() => setPrices(null)} />}

@@ -12,7 +12,7 @@ export type JobEvent = {
   jobId: string; code: string; status: string; jobType: 'SERVICE' | 'RETAIL'; branchId: string; plateNo: string | null; at: string;
 };
 
-/** USER gets only their branch. ADMIN gets all branches, or one with `branchId`. */
+/** USER / ADMIN: own branch (omit branchId). SUPER_ADMIN: all branches, or one with `branchId`. */
 export function useJobStream(onEvent: (e: JobEvent) => void, branchId?: string, type: 'SERVICE' | 'RETAIL' | 'ALL' = 'SERVICE') {
   const cb = useRef(onEvent);
   cb.current = onEvent;

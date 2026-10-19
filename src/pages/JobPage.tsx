@@ -15,8 +15,8 @@ import { isProductItem, payLines } from './PaymentPage';
 import { CancelDialog } from './UnpaidPage';
 
 function Editor({ job, onSaved, onCancel }: { job: Job; onSaved: (job: Job) => void; onCancel: () => void }) {
-  const { admin, base } = useStore();
-  const branchId = admin ? job.branchId : undefined;
+  const { superAdmin, base } = useStore();
+  const branchId = superAdmin ? job.branchId : undefined;
   const services = useApi(() => api.services.list(branchId), [branchId]);
   const products = useApi(() => api.products.list({ sellable: true, limit: 100, branchId }).then((result) => result.data), [branchId]);
   const size = job.vehicle?.size ?? 'SMALL';
@@ -30,7 +30,7 @@ function Editor({ job, onSaved, onCancel }: { job: Job; onSaved: (job: Job) => v
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [fields, setFields] = useState<Record<string, string>>({});
-  const staff = admin ? base.staff.filter((user) => !user.branchId || user.branchId === job.branchId) : base.staff;
+  const staff = superAdmin ? base.staff.filter((user) => !user.branchId || user.branchId === job.branchId) : base.staff;
 
   // product rows start from the bill; stock limits come from the product list
   const productLines: CartLine[] =

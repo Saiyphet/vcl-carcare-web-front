@@ -4,7 +4,7 @@ import { changePassword, errorMessage, logout } from '../api';
 import { Avatar, PageHeader, Sheet } from '../components/ui';
 import { SHOP } from '../config';
 import { useStore } from '../hooks/useStore';
-import { API_URL } from '../lib/api';
+import { API_URL, ROLE_LABEL } from '../lib/api';
 import { Icon } from '../components/Icon';
 import { InstallButton } from '../components/InstallButton';
 import { setTheme, useTheme } from '../hooks/useTheme';
@@ -40,7 +40,7 @@ export function SettingsPage() {
         <Avatar name={session.name} size={64} />
         <div>
           <b>{session.name}</b>
-          <small>{session.role === 'admin' ? 'ເຈົ້າຂອງຮ້ານ' : 'ພະນັກງານ'} · {session.username}{session.branchName ? ` · ${session.branchName}` : ''}</small>
+          <small>{ROLE_LABEL[session.role]} · {session.username}{session.branchName ? ` · ${session.branchName}` : ''}</small>
           {session.position && <small>{session.position}</small>}
         </div>
       </div>

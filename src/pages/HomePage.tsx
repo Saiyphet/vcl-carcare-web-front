@@ -5,7 +5,7 @@ import { Icon, type IconName } from '../components/Icon';
 import { Logo } from '../components/Logo';
 import { Avatar, Empty, Kip, Sheet, Skeleton } from '../components/ui';
 import { useApi, useStore } from '../hooks/useStore';
-import { api } from '../lib/api';
+import { api, ROLE_LABEL } from '../lib/api';
 import { cls } from '../utils/format';
 
 function LowStock({ onPick }: { onPick: () => void }) {
@@ -26,7 +26,7 @@ function LowStock({ onPick }: { onPick: () => void }) {
 }
 
 export function HomePage() {
-  const { base, session, admin, branchId } = useStore();
+  const { base, session, admin, superAdmin, branchId } = useStore();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   if (!session) return null;
@@ -41,15 +41,15 @@ export function HomePage() {
     { label: 'ລູກຄ້າ', icon: 'users', to: '/customers' },
     { label: 'ຍອດມື້ນີ້', icon: 'chart', to: '/sales/today' },
     ...(admin
-      ? ([
-          { label: 'ລາຍງານລາຍເດືອນ', icon: 'chart', to: '/reports/monthly' },
-          { label: 'ສະຫຼຸບແຕ່ລະສາຂາ', icon: 'store', to: '/reports/branches' },
-          { label: 'ເງິນເດືອນ', icon: 'wallet', to: '/admin/payroll' },
-          { label: 'ຈັດການຜູ້ໃຊ້', icon: 'users', to: '/admin/users' },
-          { label: 'ບໍລິການ ແລະ ລາຄາ', icon: 'tag', to: '/admin/services' },
-          { label: 'ຈັດການສາຂາ', icon: 'store', to: '/admin/branches' },
-        ] as const)
-      : ([{ label: 'ສະລິບເງິນເດືອນ', icon: 'wallet', to: '/me/payslip' }] as const)),
+      ? [
+          { label: 'ລາຍງານລາຍເດືອນ', icon: 'chart' as IconName, to: '/reports/monthly' },
+          ...(superAdmin ? [{ label: 'ສະຫຼຸບແຕ່ລະສາຂາ', icon: 'store' as IconName, to: '/reports/branches' }] : []),
+          { label: 'ເງິນເດືອນ', icon: 'wallet' as IconName, to: '/admin/payroll' },
+          { label: superAdmin ? 'ຈັດການຜູ້ໃຊ້' : 'ຈັດການພະນັກງານ', icon: 'users' as IconName, to: '/admin/users' },
+          { label: superAdmin ? 'ບໍລິການ ແລະ ລາຄາ' : 'ລາຄາສາຂາ', icon: 'tag' as IconName, to: '/admin/services' },
+          ...(superAdmin ? [{ label: 'ຈັດການສາຂາ', icon: 'store' as IconName, to: '/admin/branches' }] : []),
+        ]
+      : [{ label: 'ສະລິບເງິນເດືອນ', icon: 'wallet' as IconName, to: '/me/payslip' }]),
   ];
 
   return (
@@ -66,7 +66,7 @@ export function HomePage() {
         <div>
           <span className="muted">ສະບາຍດີ</span>
           <strong>{session.name}</strong>
-          <small>{admin ? 'ເຈົ້າຂອງຮ້ານ' : 'ພະນັກງານ'} · {branchName(branchId)}</small>
+          <small>{ROLE_LABEL[session.role]} · {branchName(branchId)}</small>
         </div>
       </section>
       <section className="home-stats">

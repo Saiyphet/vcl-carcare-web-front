@@ -3,7 +3,7 @@
  * lists most screens need (branches, services, staff, home counters).
  * All server calls go through ../lib/api.
  */
-import { api, ApiError, tokenStore, VEHICLE_SIZE_LABEL, VEHICLE_SIZES, type Branch, type QueueSummary, type Service, type User, type VehicleSize } from '../lib/api';
+import { api, ApiError, isSuperAdmin, tokenStore, VEHICLE_SIZE_LABEL, VEHICLE_SIZES, type Branch, type QueueSummary, type Service, type User, type VehicleSize } from '../lib/api';
 import type { Session } from '../types';
 
 const SESSION_KEY = 'vcl-carcare-session';
@@ -47,7 +47,7 @@ function emptyBase(): Base {
 function isSession(value: unknown): value is Session {
   if (!value || typeof value !== 'object') return false;
   const item = value as Session;
-  return typeof item.userId === 'string' && typeof item.name === 'string' && (item.role === 'admin' || item.role === 'user');
+  return typeof item.userId === 'string' && typeof item.name === 'string' && (item.role === 'SUPER_ADMIN' || item.role === 'ADMIN' || item.role === 'USER');
 }
 
 function readSession() {
@@ -72,7 +72,7 @@ function toSession(user: User): Session {
     userId: user.id,
     name: user.name,
     username: user.username,
-    role: user.role === 'ADMIN' ? 'admin' : 'user',
+    role: user.role,
     position: user.position ?? null,
     branchId: user.branch?.id ?? user.branchId ?? null,
     branchName: user.branch?.name ?? null,
@@ -106,20 +106,20 @@ export const getBase = () => base;
 export const getToast = () => toast;
 export const getVersion = () => version;
 
-/** USER: always their own branch. ADMIN: the branch in the header, or null for "ທຸກສາຂາ" */
+/** USER / ADMIN: always their own branch. SUPER_ADMIN: the branch in the header, or null for "ທຸກສາຂາ" */
 export function getSelectedBranchId() {
-  if (session?.role === 'user') return session.branchId;
+  if (!isSuperAdmin(session)) return session?.branchId ?? null;
   return selectedBranchId;
 }
 
-/** `branchId` to send to the API: ADMIN only (USER never sends it) */
+/** `branchId` to send to the API: SUPER_ADMIN only (ADMIN / USER never send it) */
 export function branchParam() {
-  return session?.role === 'admin' ? selectedBranchId ?? undefined : undefined;
+  return isSuperAdmin(session) ? selectedBranchId ?? undefined : undefined;
 }
 
-/** ADMIN with "ທຸກສາຂາ" selected cannot receive cars, sell or receive stock */
+/** SUPER_ADMIN with "ທຸກສາຂາ" selected cannot receive cars, sell or receive stock */
 export function needsBranch() {
-  return session?.role === 'admin' && !selectedBranchId;
+  return isSuperAdmin(session) && !selectedBranchId;
 }
 
 export function requireBranch() {
@@ -128,7 +128,7 @@ export function requireBranch() {
 }
 
 export function branchName(id?: string | null) {
-  if (!id) return session?.role === 'admin' ? 'ທຸກສາຂາ' : session?.branchName ?? '';
+  if (!id) return isSuperAdmin(session) ? 'ທຸກສາຂາ' : session?.branchName ?? '';
   return base.branches.find((branch) => branch.id === id)?.name ?? session?.branchName ?? '';
 }
 
@@ -151,6 +151,7 @@ const CODE_LABEL: Record<string, string> = {
   ALREADY_PAID: 'ຈ່າຍແລ້ວ',
   MONTH_LOCKED: 'ເດືອນນີ້ຈ່າຍເງິນເດືອນແລ້ວ ແກ້ໄຂບໍ່ໄດ້',
   ADVANCE_TOO_LARGE: 'ເບີກເກີນເງິນເດືອນທີ່ເຫຼືອ',
+  LAST_SUPER_ADMIN: 'ຕ້ອງມີເຈົ້າຂອງຮ້ານ (SUPER_ADMIN) ຢ່າງໜ້ອຍ 1 ຄົນ',
 };
 
 export function errorCode(reason: unknown) {
@@ -163,10 +164,10 @@ export function errorMessage(reason: unknown, fallback = 'ບໍ່ສຳເລ�
     const { status } = reason;
     const code = reason.body?.code ?? '';
     const message = reason.body?.message ?? '';
-    if (status === 403) return 'ບໍ່ມີສິດ';
+    if (status === 403) return 'ທ່ານບໍ່ມີສິດເຮັດລາຍການນີ້';
     if (status === 401) return /invalid username or password/i.test(message) ? 'ຊື່ຜູ້ໃຊ້ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ' : 'ກະລຸນາເຂົ້າສູ່ລະບົບໃໝ່';
     if (code === 'VALIDATION_ERROR' && reason.body.details?.length) return reason.body.details.join('\n');
-    if (code === 'USER_HAS_HISTORY') return CODE_LABEL[code];
+    if (code === 'USER_HAS_HISTORY' || code === 'LAST_SUPER_ADMIN') return CODE_LABEL[code];
     if (CODE_LABEL[code]) return message ? `${CODE_LABEL[code]} — ${message}` : CODE_LABEL[code];
     return message || fallback;
   }
@@ -236,7 +237,11 @@ export async function refreshBase() {
 export async function login(username: string, password: string) {
   const user = await api.auth.login(username.trim(), password);
   base = emptyBase();
-  if (user.role === 'ADMIN' && localStorage.getItem(BRANCH_KEY) === null) selectedBranchId = null;
+  if (isSuperAdmin(user)) {
+    if (localStorage.getItem(BRANCH_KEY) === null) selectedBranchId = null;
+  } else {
+    selectedBranchId = user.branch?.id ?? user.branchId ?? null;
+  }
   saveSession(toSession(user));
   await refreshBase();
   return session;

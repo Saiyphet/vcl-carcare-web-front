@@ -135,9 +135,11 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
 }
 
 function BranchPriceEditor({ service, onClose }: { service: Service; onClose: () => void }) {
-  const { base } = useStore();
-  const [branchId, setBranchId] = useState(base.branches[0]?.id ?? '');
-  const [values, setValues] = useState<Record<VehicleSize, string>>(() => pricesFor(base.branches[0]?.id ?? ''));
+  const { base, session, superAdmin } = useStore();
+  const lockedBranch = superAdmin ? '' : (session?.branchId ?? '');
+  const startBranch = lockedBranch || (base.branches[0]?.id ?? '');
+  const [branchId, setBranchId] = useState(startBranch);
+  const [values, setValues] = useState<Record<VehicleSize, string>>(() => pricesFor(startBranch));
   const [busy, setBusy] = useState(false);
 
   function pricesFor(id: string) {
@@ -167,12 +169,18 @@ function BranchPriceEditor({ service, onClose }: { service: Service; onClose: ()
 
   return (
     <Sheet title={`ລາຄາສາຂາ · ${service.name}`} onClose={onClose}>
-      <label className="card-label" htmlFor="bp-branch">ສາຂາ</label>
-      <label className="field">
-        <select id="bp-branch" value={branchId} onChange={(event) => { setBranchId(event.target.value); setValues(pricesFor(event.target.value)); }}>
-          {base.branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.code} · {branch.name}</option>)}
-        </select>
-      </label>
+      {superAdmin ? (
+        <>
+          <label className="card-label" htmlFor="bp-branch">ສາຂາ</label>
+          <label className="field">
+            <select id="bp-branch" value={branchId} onChange={(event) => { setBranchId(event.target.value); setValues(pricesFor(event.target.value)); }}>
+              {base.branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.code} · {branch.name}</option>)}
+            </select>
+          </label>
+        </>
+      ) : (
+        <p className="muted">{session?.branchName ?? 'ສາຂາຂອງທ່ານ'}</p>
+      )}
       <span className="card-label">ລາຄາຕາມຂະໜາດ (ວ່າງ = ລາຄາປົກກະຕິ)</span>
       <div className="sizes-grid">
         {SIZES.map((size) => (
@@ -243,7 +251,7 @@ function MaterialsEditor({ service, onClose }: { service: Service; onClose: () =
 }
 
 export function ServicesPage() {
-  const { base } = useStore();
+  const { base, superAdmin } = useStore();
   const { data, loading } = useApi(() => api.services.list(undefined, true), [], { live: true });
   const [form, setForm] = useState<{ service: Service | null } | null>(null);
   const [branchPrices, setBranchPrices] = useState<Service | null>(null);
@@ -271,7 +279,7 @@ export function ServicesPage() {
 
   return (
     <div className="page">
-      <PageHeader title="ບໍລິການ ແລະ ລາຄາ" />
+      <PageHeader title={superAdmin ? 'ບໍລິການ ແລະ ລາຄາ' : 'ລາຄາສາຂາ'} />
       {loading && !data && <Skeleton rows={4} />}
       {!loading && !data?.length && <Empty text="ຍັງບໍ່ມີບໍລິການ" />}
       <div className="queue-list">
@@ -299,22 +307,24 @@ export function ServicesPage() {
                 <small className="muted">ວັດສະດຸ: {service.materials?.map((row) => `${row.product?.name ?? ''} ${row.qtyPerUse}`).join(', ')}</small>
               )}
               <div className="payroll-actions">
-                <button type="button" className="mini" onClick={() => setForm({ service })}>ແກ້ໄຂ</button>
+                {superAdmin && <button type="button" className="mini" onClick={() => setForm({ service })}>ແກ້ໄຂ</button>}
                 <button type="button" className="mini" onClick={() => setBranchPrices(service)}>ລາຄາສາຂາ</button>
-                <button type="button" className="mini" onClick={() => setMaterials(service)}>ວັດສະດຸ</button>
-                <button type="button" className="mini danger" onClick={() => setRemove(service)}>ລຶບ</button>
+                {superAdmin && <button type="button" className="mini" onClick={() => setMaterials(service)}>ວັດສະດຸ</button>}
+                {superAdmin && <button type="button" className="mini danger" onClick={() => setRemove(service)}>ລຶບ</button>}
               </div>
             </article>
           );
         })}
       </div>
-      <div className="pad">
-        <button type="button" className="btn red wide" onClick={() => setForm({ service: null })}>+ ເພີ່ມບໍລິການ</button>
-      </div>
-      {form && <ServiceForm service={form.service} onClose={() => setForm(null)} />}
+      {superAdmin && (
+        <div className="pad">
+          <button type="button" className="btn red wide" onClick={() => setForm({ service: null })}>+ ເພີ່ມບໍລິການ</button>
+        </div>
+      )}
+      {form && superAdmin && <ServiceForm service={form.service} onClose={() => setForm(null)} />}
       {branchPrices && <BranchPriceEditor service={branchPrices} onClose={() => setBranchPrices(null)} />}
-      {materials && <MaterialsEditor service={materials} onClose={() => setMaterials(null)} />}
-      {remove && (
+      {materials && superAdmin && <MaterialsEditor service={materials} onClose={() => setMaterials(null)} />}
+      {remove && superAdmin && (
         <Confirm title="ລຶບບໍລິການ" text={remove.name} confirmLabel="ລຶບ" busy={busy} onConfirm={() => void confirmRemove()} onClose={() => setRemove(null)} />
       )}
     </div>

@@ -2,8 +2,8 @@ import { setSelectedBranch } from '../api';
 import { useStore } from '../hooks/useStore';
 
 export function BranchSelect() {
-  const { base, admin, branchId } = useStore();
-  if (!admin) return null;
+  const { base, superAdmin, branchId } = useStore();
+  if (!superAdmin) return null;
   return (
     <label className="branch-select">
       <span>ສາຂາ</span>

@@ -158,7 +158,7 @@ function SlipDrawer({ row, month, onClose }: { row: PayrollRow; month: string; o
 }
 
 export function PayrollPage() {
-  const { branchId } = useStore();
+  const { session, branchId } = useStore();
   const [month, setMonth] = useState(shopMonth());
   const { data, loading } = useApi(() => api.payroll.sheet(month, branchParam()), [month, branchId], { live: true });
   const [adjust, setAdjust] = useState<{ row: PayrollRow; type: AdjustmentType } | null>(null);
@@ -211,6 +211,7 @@ export function PayrollPage() {
       <div className="payroll-list">
         {rows.map((row) => {
           const paid = row.status === 'PAID';
+          const own = row.user.id === session?.userId;
           return (
             <article key={row.user.id} className="card payroll-row">
               <div className="person">
@@ -228,14 +229,14 @@ export function PayrollPage() {
                 <div><span>ຮັບຕົວຈິງ</span><b className={cls('net', row.netPay < 0 && 'negative')}>{money(row.netPay)}</b></div>
               </div>
               <div className="payroll-actions">
-                <button type="button" className="mini" disabled={paid} onClick={() => setAdjust({ row, type: 'DEDUCTION' })}>ຕັດເງິນ</button>
-                <button type="button" className="mini" disabled={paid} onClick={() => setAdjust({ row, type: 'ADVANCE' })}>ເບີກລ່ວງໜ້າ</button>
+                {!own && <button type="button" className="mini" disabled={paid} onClick={() => setAdjust({ row, type: 'DEDUCTION' })}>ຕັດເງິນ</button>}
+                {!own && <button type="button" className="mini" disabled={paid} onClick={() => setAdjust({ row, type: 'ADVANCE' })}>ເບີກລ່ວງໜ້າ</button>}
                 <button type="button" className="mini" onClick={() => setSlip(row)}>ລາຍລະອຽດ</button>
-                {paid ? (
+                {!own && (paid ? (
                   <button type="button" className="mini danger" onClick={() => setUnpay(row)}>ຍົກເລີກການຈ່າຍ</button>
                 ) : (
                   <button type="button" className="status-btn done" onClick={() => setPay(row)}>ຈ່າຍເງິນເດືອນ</button>
-                )}
+                ))}
               </div>
             </article>
           );

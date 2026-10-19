@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { branchName, bump } from '../api';
+import { ROLE_LABEL } from '../lib/api';
 import { useJobStream } from '../hooks/useJobStream';
 import { toggleTheme, useTheme } from '../hooks/useTheme';
 import { useStore, useToast } from '../hooks/useStore';
@@ -26,21 +27,21 @@ const TABS: Array<{ to: string; label: string; icon: IconName; end?: boolean }> 
 
 /** Live updates for the whole app: any job event refetches counters and live screens */
 function LiveJobs() {
-  const { admin, branchId } = useStore();
-  useJobStream(() => bump(), admin ? branchId ?? undefined : undefined, 'ALL');
+  const { superAdmin, branchId } = useStore();
+  useJobStream(() => bump(), superAdmin ? branchId ?? undefined : undefined, 'ALL');
   return null;
 }
 
 export function Frame() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { session, base, admin, branchId } = useStore();
+  const { session, base, branchId } = useStore();
   const message = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
   const theme = useTheme();
   const loggedIn = Boolean(session) && pathname !== '/login';
   const unpaid = base.summary?.unpaid ?? 0;
-  const items = menuFor(admin);
+  const items = session ? menuFor(session.role) : [];
 
   return (
     <div className="stage">
@@ -64,7 +65,7 @@ export function Frame() {
             <Avatar name={session.name} size={40} />
             <div>
               <b>{session.name}</b>
-              <small>{admin ? 'ເຈົ້າຂອງຮ້ານ' : 'ພະນັກງານ'}{session.branchName ? ` · ${session.branchName}` : ''}</small>
+              <small>{ROLE_LABEL[session.role]}{session.branchName ? ` · ${session.branchName}` : ''}</small>
             </div>
           </NavLink>
         </aside>

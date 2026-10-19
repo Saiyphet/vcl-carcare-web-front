@@ -11,11 +11,13 @@ function apiOrigin(raw?: string) {
   if (!value) return '';
   return value.replace(/\/health$/i, '');
 }
+/** Dev: same-origin `/api` via the Vite proxy (avoids CORS). Production: the public API origin. */
 export const API_URL = apiOrigin(import.meta.env.VITE_API_URL);
 const BASE = `${API_URL}/api/v1`;
 
 // ───────── Types (match the API) ─────────
-export type Role = 'ADMIN' | 'USER';
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'USER';
+export const ROLE_LABEL: Record<Role, string> = { SUPER_ADMIN: 'ເຈົ້າຂອງຮ້ານ', ADMIN: 'ແອັດມິນສາຂາ', USER: 'ພະນັກງານ' };
 export type JobStatus = 'WAITING' | 'IN_PROGRESS' | 'READY' | 'DONE' | 'CANCELLED';
 export type JobType = 'SERVICE' | 'RETAIL';
 export type PaymentMethod = 'CASH' | 'TRANSFER' | 'QR';
@@ -33,15 +35,17 @@ export interface Branch { id: string; code: string; name: string; address?: stri
 export interface User {
   id: string; username: string; name: string; nickname?: string | null; role: Role; position?: string | null;
   phone?: string | null; baseSalary?: number; active?: boolean;
-  /** USER: their branch. ADMIN: optional home branch (null = works across all branches) */
+  /** USER / ADMIN: their branch. SUPER_ADMIN: optional home branch (null = every branch) */
   branchId: string | null; branch?: Pick<Branch, 'id' | 'code' | 'name' | 'active'> | null;
 }
-export const isAdmin = (u?: User | null) => u?.role === 'ADMIN';
+export const isSuperAdmin = (u?: Pick<User, 'role'> | null) => u?.role === 'SUPER_ADMIN';
+/** ADMIN or SUPER_ADMIN */
+export const isAdmin = (u?: Pick<User, 'role'> | null) => u?.role === 'ADMIN' || u?.role === 'SUPER_ADMIN';
 export interface Service {
   id: string; name: string; description?: string | null; basePrice: number; priceType: 'FIXED' | 'FROM'; durationMin: number;
   commissionPercent?: number; sortOrder?: number; active?: boolean;
   prices: { size: VehicleSize; price: number }[];
-  /** ADMIN only */
+  /** SUPER_ADMIN: all branches. ADMIN: own branch */
   branchPrices?: { branchId: string; size: VehicleSize; price: number; branch?: Pick<Branch, 'id' | 'code' | 'name'> }[];
   materials?: { productId: string; qtyPerUse: number; product?: { id: string; name: string; unit: string } }[];
   /** Price per size for the requested branch (USER: own branch) */
@@ -201,15 +205,25 @@ export class ApiError extends Error {
 async function request<T>(method: string, path: string, body?: unknown): Promise<{ data: T; meta?: Meta }> {
   const token = tokenStore.get();
   const isForm = body instanceof FormData;
-  const res = await fetch(BASE + path, {
-    method,
-    headers: {
-      ...(body && !isForm ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
-  });
-  const json = await res.json();
+  let res: Response;
+  try {
+    res = await fetch(BASE + path, {
+      method,
+      headers: {
+        ...(body && !isForm ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
+    });
+  } catch {
+    throw new TypeError('ເຊື່ອມຕໍ່ API ບໍ່ໄດ້');
+  }
+  let json: { success?: boolean; data?: T; meta?: Meta; error?: ApiErrorBody };
+  try {
+    json = await res.json();
+  } catch {
+    throw new TypeError('ເຊື່ອມຕໍ່ API ບໍ່ໄດ້');
+  }
   if (!json.success) {
     // A wrong password is also 401; stay on the login page so the error can be shown
     if (res.status === 401 && typeof window !== 'undefined' && path !== '/auth/login') {
@@ -247,7 +261,7 @@ export const api = {
   /** [{ code, label, labelEn }] in display order — for the size selector */
   vehicleSizes: () => get<{ code: VehicleSize; label: string; labelEn: string }[]>('/services/vehicle-sizes'),
 
-  /** USER: only their branch. ADMIN: all branches. */
+  /** USER / ADMIN: own branch. SUPER_ADMIN: all branches. */
   branches: {
     list: (includeInactive?: boolean) => get<Branch[]>(`/branches${qs({ includeInactive })}`),
     create: (body: { code: string; name: string; address?: string; phone?: string }) =>
@@ -257,7 +271,7 @@ export const api = {
   },
 
   services: {
-    /** branchId: ADMIN only — which branch's prices to show in effectivePrices */
+    /** branchId: SUPER_ADMIN only — which branch's prices to show in effectivePrices */
     list: (branchId?: string, includeInactive?: boolean) => get<Service[]>(`/services${qs({ branchId, includeInactive })}`),
     create: (body: Partial<Omit<Service, 'id' | 'effectivePrices' | 'branchPrices' | 'materials'>> & { name: string; basePrice: number }) =>
       request<Service>('POST', '/services', body).then((r) => r.data),
@@ -291,7 +305,7 @@ export const api = {
 
   jobs: {
     /** Receive car screen */
-    /** USER: branch is automatic. ADMIN: pass branchId. With `payment` the job is paid in the same call. */
+    /** USER / ADMIN: branch is automatic. SUPER_ADMIN: pass branchId. With `payment` the job is paid in the same call. */
     create: (body: {
       branchId?: string; plateNo: string; province?: string; brand?: string; model?: string; color?: string; size?: VehicleSize;
       customerName?: string; customerPhone?: string; assignedStaffId?: string; note?: string;
@@ -352,7 +366,7 @@ export const api = {
     create: (body: ProductInput) => request<Product>('POST', '/products', body).then((r) => r.data),
     update: (id: string, body: Partial<ProductInput>) => request<Product>('PATCH', `/products/${id}`, body).then((r) => r.data),
     remove: (id: string) => request<unknown>('DELETE', `/products/${id}`).then((r) => r.data),
-    /** IN = receive (any user, own branch). ADJUST = correction (ADMIN only) */
+    /** IN = receive (any user, own branch). ADJUST = correction (ADMIN / SUPER_ADMIN) */
     adjust: (id: string, type: 'IN' | 'ADJUST', qty: number, opts: { branchId?: string; note?: string } = {}) =>
       request<unknown>('POST', `/products/${id}/stock`, { type, qty, ...opts }).then((r) => r.data),
     movements: (id: string, q: { branchId?: string; page?: number; limit?: number } = {}) =>
@@ -364,14 +378,14 @@ export const api = {
   },
 
   reports: {
-    /** USER: own branch. ADMIN: branchId or all (+ byBranch) */
+    /** USER / ADMIN: own branch. SUPER_ADMIN: branchId or all (+ byBranch) */
     daily: (date?: string, branchId?: string) => get<DailyReport>(`/reports/daily${qs({ date, branchId })}`),
-    /** ADMIN only */
+    /** ADMIN / SUPER_ADMIN */
     monthly: (year?: number, month?: number, branchId?: string) => get<MonthlyReport>(`/reports/monthly${qs({ year, month, branchId })}`),
-    /** ADMIN only */
+    /** ADMIN / SUPER_ADMIN */
     staff: (from?: string, to?: string, branchId?: string) => get<StaffReport>(`/reports/staff${qs({ from, to, branchId })}`),
     me: (from?: string, to?: string) => get<MyReport>(`/reports/me${qs({ from, to })}`),
-    /** ADMIN only — revenue per branch for a date range (default: this month) */
+    /** SUPER_ADMIN: all branches. ADMIN: own branch only */
     branches: (from?: string, to?: string) => get<BranchSummary>(`/reports/branches${qs({ from, to })}`),
   },
 
@@ -389,9 +403,9 @@ export const api = {
   payroll: {
     /** Own payslip (any role) */
     me: (month?: string) => get<Payslip>(`/payroll/me${qs({ month })}`),
-    /** ADMIN only */
+    /** ADMIN / SUPER_ADMIN */
     sheet: (month?: string, branchId?: string) => get<PayrollSheet>(`/payroll${qs({ month, branchId })}`),
-    /** ADMIN only */
+    /** ADMIN / SUPER_ADMIN */
     payslip: (userId: string, month?: string) => get<Payslip>(`/payroll/users/${userId}${qs({ month })}`),
     adjustments: (q: { month?: string; userId?: string; branchId?: string; type?: AdjustmentType } = {}) =>
       get<PayrollAdjustment[]>(`/payroll/adjustments${qs(q)}`),
