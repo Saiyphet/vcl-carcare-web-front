@@ -230,7 +230,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       tokenStore.clear();
       window.location.href = '/login';
     }
-    const err = new ApiError(res.status, json.error);
+    const err = new ApiError(res.status, json.error ?? { statusCode: res.status, code: 'UNKNOWN', message: 'ບໍ່ສຳເລັດ' });
     err.request = `${method} ${path}`;
     throw err;
   }

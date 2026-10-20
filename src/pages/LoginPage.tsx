@@ -8,12 +8,6 @@ import { InstallButton } from '../components/InstallButton';
 import { SHOP } from '../config';
 import { useStore } from '../hooks/useStore';
 
-// const API_ACCOUNTS = [
-//   { username: 'admin', password: 'admin1234', label: 'ເຈົ້າຂອງຮ້ານ' },
-//   { username: 'admin01', password: 'admin1234', label: 'ແອັດມິນສາຂາ VT01' },
-//   { username: 'user01', password: 'user1234', label: 'ພະນັກງານ VT01' },
-// ];
-
 export function LoginPage() {
   const { session } = useStore();
   const [username, setUsername] = useState('');
@@ -90,14 +84,6 @@ export function LoginPage() {
             ໂທ {SHOP.phone}
           </p>
         )}
-        {/* <div className="demo">
-          <span>ບັນຊີທົດລອງຂອງ API</span>
-          {API_ACCOUNTS.map((user) => (
-            <button key={user.username} type="button" className="btn ghost" onClick={() => void submit(user.username, user.password)}>
-              {user.label} · {user.username}
-            </button>
-          ))}
-        </div> */}
       </form>
       <div className="login-install">
         <InstallButton />
